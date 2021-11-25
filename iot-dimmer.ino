@@ -7,6 +7,9 @@
 const char* ssid = WIFI_SSID;
 const char* password = WIFI_PASSWORD;
 
+// Blink state
+unsigned long prevMs = 0;
+
 // The setup function runs once when you press reset or power the board
 void setup() {
     // Setup serial and print boot message
@@ -34,8 +37,11 @@ void setup() {
 
 // The loop function runs over and over again forever
 void loop() {
-    digitalWrite(LED_BUILTIN, HIGH); // turn the LED on (HIGH is the voltage level)
-    delay(1000);                     // wait for a second
-    digitalWrite(LED_BUILTIN, LOW);  // turn the LED off by making the voltage LOW
-    delay(1000);                     // wait for a second
+    unsigned long curMs = millis();
+    if (curMs - prevMs >= 1000) {
+        prevMs = curMs;
+        const int led = LED_BUILTIN;
+        int ledState = digitalRead(led);
+        digitalWrite(led, ledState == LOW ? HIGH : LOW);
+    }
 }
