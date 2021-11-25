@@ -6,12 +6,16 @@
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+#include <PubSubClient.h>
 
 const char* ssid = WIFI_SSID;
 const char* password = WIFI_PASSWORD;
 
-// Blink state
-unsigned long prevMs = 0;
+const char* server = MQTT_SERVER;
+const char* topic = MQTT_TOPIC;
+
+WiFiClient espClient;
+PubSubClient client(espClient);
 
 // The setup function runs once when you press reset or power the board
 void setup() {
@@ -69,17 +73,62 @@ void setup() {
 
     // Initialize digital pin LED_BUILTIN as an output.
     pinMode(LED_BUILTIN, OUTPUT);
+
+    // Setup mqtt connection
+    client.setServer(server, 1883);
+    client.setCallback([](char* topic, byte* payload, unsigned int length){
+        Serial.print("Message arrived on topic [");
+        Serial.print(topic);
+        Serial.print("] ");
+        for (int i = 0; i < length; i++) {
+            Serial.print((char)payload[i]);
+        }
+        Serial.println();
+
+        // Switch on the LED if an 1 was received as first character
+        if ((char)payload[0] == '1') {
+            // Turn the LED on (Note that LOW is the voltage level
+            // but actually the LED is on; this is because
+            // it is active low on the ESP-01)
+            digitalWrite(BUILTIN_LED, LOW);
+        } else {
+            // Turn the LED off by making the voltage HIGH
+            digitalWrite(BUILTIN_LED, HIGH);
+        }
+    });
+}
+
+void reconnect() {
+    // Loop until we're reconnected
+    while (!client.connected()) {
+        Serial.print("Attempting MQTT connection...");
+        // Create a random client ID
+        String clientId = "esp8266-";
+        clientId += String(random(0xffff), HEX);
+        // Attempt to connect
+        if (client.connect(clientId.c_str())) {
+            Serial.println(" connected.");
+            client.subscribe(topic);
+        } else {
+            Serial.print("failed, rc=");
+            Serial.print(client.state());
+            Serial.println(" retrying in 5 seconds");
+            // Wait 5 seconds before retrying
+            delay(5000);
+        }
+    }
 }
 
 // The loop function runs over and over again forever
 void loop() {
+    // Handle ota updates
     ArduinoOTA.handle();
 
-    unsigned long curMs = millis();
-    if (curMs - prevMs >= 1000) {
-        prevMs = curMs;
-        const int led = LED_BUILTIN;
-        int ledState = digitalRead(led);
-        digitalWrite(led, ledState == LOW ? HIGH : LOW);
+    // Try to reconnect if not connected
+    if (!client.connected()) {
+        reconnect();
     }
+
+    // Handle mqtt traffic
+    client.loop();
 }
