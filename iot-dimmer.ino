@@ -99,23 +99,17 @@ void setup() {
 }
 
 void reconnect() {
-    // Loop until we're reconnected
-    while (!client.connected()) {
-        Serial.print("Attempting MQTT connection...");
-        // Create a random client ID
-        String clientId = "esp8266-";
-        clientId += String(random(0xffff), HEX);
-        // Attempt to connect
-        if (client.connect(clientId.c_str())) {
-            Serial.println(" connected.");
-            client.subscribe(topic);
-        } else {
-            Serial.print("failed, rc=");
-            Serial.print(client.state());
-            Serial.println(" retrying in 5 seconds");
-            // Wait 5 seconds before retrying
-            delay(5000);
-        }
+    // Create a random client ID
+    String clientId = "esp8266-";
+    clientId += String(random(0xffff), HEX);
+    // Attempt to connect
+    Serial.print("Attempting MQTT connection...");
+    if (client.connect(clientId.c_str())) {
+        Serial.println(" connected.");
+        client.subscribe(topic);
+    } else {
+        Serial.print("failed, rc=");
+        Serial.print(client.state());
     }
 }
 
