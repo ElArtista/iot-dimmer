@@ -7,6 +7,10 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <PubSubClient.h>
+#include <dimmable_light.h>
+
+const int syncPin = 13;
+const int thyristorPin = 12;
 
 const char* ssid = WIFI_SSID;
 const char* password = WIFI_PASSWORD;
@@ -16,6 +20,7 @@ const char* topic = MQTT_TOPIC;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
+DimmableLight light(thyristorPin);
 
 // The setup function runs once when you press reset or power the board
 void setup() {
@@ -72,7 +77,7 @@ void setup() {
     ArduinoOTA.begin();
 
     // Initialize digital pin LED_BUILTIN as an output.
-    pinMode(LED_BUILTIN, OUTPUT);
+    //pinMode(LED_BUILTIN, OUTPUT);
 
     // Setup mqtt connection
     client.setServer(server, 1883);
@@ -85,6 +90,7 @@ void setup() {
         }
         Serial.println();
 
+        /*
         // Switch on the LED if an 1 was received as first character
         if ((char)payload[0] == '1') {
             // Turn the LED on (Note that LOW is the voltage level
@@ -95,7 +101,15 @@ void setup() {
             // Turn the LED off by making the voltage HIGH
             digitalWrite(BUILTIN_LED, HIGH);
         }
+        */
+        payload[length] = '\0';
+        int percentage = atoi((char*)payload);
+        int brightness = round(percentage * 255.0 / 100.0);
+        light.setBrightness(brightness);
     });
+
+    DimmableLight::setSyncPin(syncPin);
+    DimmableLight::begin();
 }
 
 void reconnect() {
